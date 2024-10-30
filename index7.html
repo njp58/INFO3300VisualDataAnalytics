@@ -1,0 +1,116 @@
+<html>
+
+<head>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script src="https://d3js.org/topojson.v3.min.js"></script>
+
+  <style>
+    .state {
+      fill: none;
+      stroke: darkgray;
+      stroke-width: 3px;
+    }
+
+    .outline {
+      fill: none;
+      stroke: white;
+      stroke-width: 1px;
+    }
+  </style>
+</head>
+
+<body>
+  <h3>
+    Natalina Putrino <br> njp58
+  </h3>
+
+  <p id="p1">
+    <svg id="choropleth" height="770" width="990" style="margin:20px"></svg>
+
+    <script>
+      //Part A
+      const svg = d3.select("#choropleth");
+      const width = svg.attr("width");
+      const height = svg.attr("height");
+      const margin = { top: 20, right: 20, bottom: 20, left: 20 };
+      const mapWidth = width - margin.left - margin.right;
+      const mapHeight = height - margin.top - margin.bottom;
+
+
+      const requestData = async function () {
+
+        let nyincome = await d3.json("ny_income.topo.json");
+        console.log(nyincome);
+
+
+        var zips = topojson.feature(nyincome, nyincome.objects.zip_codes);
+        console.log(zips)
+        var zipsMesh = topojson.mesh(nyincome, nyincome.objects.zip_codes);
+        console.log(zipsMesh)
+        var stateMesh = topojson.mesh(nyincome, nyincome.objects.state); //ISSUE
+        console.log(stateMesh)
+
+        var projection = d3.geoMercator().fitSize([mapWidth, mapHeight], zips)
+        var path = d3.geoPath().projection(projection);
+
+        //Part B
+        var colors = ["#fcd2ee ", "#fa7dd0", "#fc0aab", "#73054e", "#8b0dde"];
+
+        var dom = d3.map(nyincome.objects.zip_codes.geometries, d => d.properties.median_income);
+        console.log(dom)
+
+        const colorScale = d3.scaleQuantile()
+          .domain(dom)
+          .range(colors)
+
+        console.log(colorScale)
+
+        //Part C
+        const map = svg.append("g")
+          .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+        let mapElements = map.selectAll('path.zips').data(zips.features)
+          .join('path')
+          .attr('class', 'zips')
+          .attr("d", path)
+          .style('fill', d => colorScale(d.properties.median_income));
+
+        map.append('path').datum(zipsMesh)
+          .attr('class', 'outline')
+          .attr('d', path);
+
+        map.append('path').datum(stateMesh)
+          .attr('class', 'state')
+          .attr('d', path);
+
+        //Part D
+        map.append('circle')
+          .attr('cx', projection([-76.4850, 42.4476])[0])
+          .attr('cy', projection([-76.4850, 42.4476])[1])
+          .attr('r', 5)
+          .attr('fill', 'black')
+          .attr('stroke', 'white'); //Jef Rez told me to do this in OH
+
+        //Part E
+        let formatter = d3.format("$,.2f");
+        let scaleThreshold = colorScale.quantiles();
+        console.log(scaleThreshold)
+        let threshold = d3.select("#list"); //selecting ul list
+        console.log(threshold)
+        threshold.selectAll("li") //li is what we're adding to it
+          .data(scaleThreshold) //array of 4 numbers
+          .join("li") //creating bulletpoints for each number
+          .text(d => formatter(d));
+
+      }
+
+      requestData();
+    </script>
+
+  <ul id="list">
+
+  </ul>
+  </p>
+</body>
+
+</html>
